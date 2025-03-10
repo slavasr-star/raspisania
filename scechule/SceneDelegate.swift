@@ -1,5 +1,4 @@
 import UIKit
-import Firebase
 import FirebaseAuth
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
@@ -11,19 +10,18 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         options connectionOptions: UIScene.ConnectionOptions
     ) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
-        
-        FirebaseApp.configure() // Инициализация Firebase
 
         window = UIWindow(windowScene: windowScene)
 
-        if Auth.auth().currentUser != nil {
-            window?.rootViewController = createTabBarController()
-        } else {
-            let loginVC = UINavigationController(rootViewController: LoginViewController())
-            window?.rootViewController = loginVC
+        DispatchQueue.main.async {
+            if Auth.auth().currentUser != nil {
+                self.window?.rootViewController = self.createTabBarController()
+            } else {
+                let loginVC = UINavigationController(rootViewController: LoginViewController()) // ✅ Обернули в NavigationController
+                self.window?.rootViewController = loginVC
+            }
+            self.window?.makeKeyAndVisible()
         }
-
-        window?.makeKeyAndVisible()
     }
 
     private func createTabBarController() -> UITabBarController {
@@ -35,7 +33,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let bookingsVC = UINavigationController(rootViewController: MyBookingsViewController())
         bookingsVC.tabBarItem = UITabBarItem(title: "Мои записи", image: UIImage(systemName: "bookmark"), tag: 1)
 
-        tabBarController.viewControllers = [classesVC, bookingsVC]
+        let settingsVC = UINavigationController(rootViewController: SettingsViewController())
+        settingsVC.tabBarItem = UITabBarItem(title: "Настройки", image: UIImage(systemName: "gear"), tag: 2)
+
+        tabBarController.viewControllers = [classesVC, bookingsVC, settingsVC]
         return tabBarController
     }
 
@@ -45,4 +46,3 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func sceneWillEnterForeground(_ scene: UIScene) {}
     func sceneDidEnterBackground(_ scene: UIScene) {}
 }
-

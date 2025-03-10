@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -54,6 +54,7 @@
 		93D82F302D6CBAA700249E43 /* Animations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93D82F2F2D6CBAA700249E43 /* Animations.swift */; };
 		93D82F322D6CBBB600249E43 /* CustomButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93D82F312D6CBBB600249E43 /* CustomButton.swift */; };
 		93D82F342D6CBC7700249E43 /* CustomTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93D82F332D6CBC7700249E43 /* CustomTableViewCell.swift */; };
+		93DF5D312D78CFBB00A78EF3 /* ManageScheduleViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93DF5D302D78CFBB00A78EF3 /* ManageScheduleViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -82,6 +83,7 @@
 		93D82F2F2D6CBAA700249E43 /* Animations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Animations.swift; sourceTree = "<group>"; };
 		93D82F312D6CBBB600249E43 /* CustomButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomButton.swift; sourceTree = "<group>"; };
 		93D82F332D6CBC7700249E43 /* CustomTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTableViewCell.swift; sourceTree = "<group>"; };
+		93DF5D302D78CFBB00A78EF3 /* ManageScheduleViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageScheduleViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -154,6 +156,7 @@
 				93D82F252D6C904A00249E43 /* AdminPanelViewController.swift */,
 				93D82F292D6CB78700249E43 /* AddEditClassViewController.swift */,
 				93D82F2B2D6CB80A00249E43 /* SettingsViewController.swift */,
+				93DF5D302D78CFBB00A78EF3 /* ManageScheduleViewController.swift */,
 				93D82F2D2D6CB88E00249E43 /* Extensions.swift */,
 				93D82F2F2D6CBAA700249E43 /* Animations.swift */,
 				93D82F312D6CBBB600249E43 /* CustomButton.swift */,
@@ -228,7 +231,6 @@
 				};
 			};
 			buildConfigurationList = 93D82EC02D6C3CC800249E43 /* Build configuration list for PBXProject "scechule" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -239,6 +241,7 @@
 			packageReferences = (
 				93D82EDE2D6C3DB800249E43 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
+			preferredProjectObjectVersion = 77;
 			productRefGroup = 93D82EC62D6C3CC800249E43 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -266,6 +269,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				93DF5D312D78CFBB00A78EF3 /* ManageScheduleViewController.swift in Sources */,
 				93D82F142D6C645300249E43 /* ClassModel.swift in Sources */,
 				93D82F2E2D6CB88E00249E43 /* Extensions.swift in Sources */,
 				93D82F1E2D6C8D6B00249E43 /* RegisterViewController.swift in Sources */,

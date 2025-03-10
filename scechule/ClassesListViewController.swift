@@ -1,6 +1,8 @@
 import UIKit
+import FirebaseFirestore
 
 class ClassesListViewController: UIViewController {
+    private let db = Firestore.firestore()
     private var classes: [DanceClass] = []
     private let tableView = UITableView()
     private let emptyLabel: UILabel = {
@@ -37,7 +39,24 @@ class ClassesListViewController: UIViewController {
     }
 
     private func fetchClasses() {
-        DatabaseManager.shared.getAllClasses { [weak self] fetchedClasses in
+        db.collection("classes").getDocuments(source: .default) { [weak self] (snapshot, error) in
+            if let error = error {
+                print("Ошибка загрузки данных: \(error.localizedDescription)")
+                return
+            }
+
+            guard let documents = snapshot?.documents else { return }
+            let fetchedClasses = documents.compactMap { doc -> DanceClass? in
+                let data = doc.data()
+                guard let name = data["name"] as? String,
+                      let instructor = data["instructor"] as? String,
+                      let time = data["time"] as? String,
+                      let maxCapacity = data["maxCapacity"] as? Int,
+                      let description = data["description"] as? String else { return nil }
+                
+                return DanceClass(id: doc.documentID, name: name, instructor: instructor, time: time, maxCapacity: maxCapacity, description: description)
+            }
+
             DispatchQueue.main.async {
                 self?.classes = fetchedClasses
                 self?.tableView.reloadData()

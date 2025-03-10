@@ -1,3 +1,11 @@
+//
+//  TabBarController 2.swift
+//  scechule
+//
+//  Created by Миласлава Романова on 06.03.2025.
+//
+
+
 import UIKit
 import FirebaseAuth
 

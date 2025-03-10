@@ -30,10 +30,9 @@ class MyBookingsViewController: UIViewController {
     }
 
     private func fetchBookings() {
-        guard let userId = UserDefaults.standard.value(forKey: "userId") as? Int else { return }
-        let userIdString = String(userId)
+        guard let userId = UserDefaults.standard.string(forKey: "userId") else { return }
 
-        DatabaseManager.shared.getUserBookings(userId: userIdString) { [weak self] bookings in
+        DatabaseManager.shared.getUserBookings(userId: userId) { [weak self] bookings in
             guard let self = self else { return }
 
             self.bookings = bookings.map {

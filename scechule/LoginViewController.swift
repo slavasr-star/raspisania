@@ -72,20 +72,27 @@ class LoginViewController: UIViewController {
                 return
             }
 
-            UserDefaults.standard.set(true, forKey: "isUserLoggedIn")
-            UserDefaults.standard.synchronize()
-
-            if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let window = scene.windows.first {
-                window.rootViewController = TabBarController()
-                window.makeKeyAndVisible()
+            guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                  let windowSceneDelegate = scene.delegate as? SceneDelegate,
+                  let window = windowSceneDelegate.window else {
+                self.showAlert(title: "Ошибка", message: "Не удалось загрузить главное окно")
+                return
             }
+
+            window.rootViewController = TabBarController()
+            window.makeKeyAndVisible()
         }
     }
 
     @objc private func registerTapped() {
         let registerVC = RegisterViewController()
-        navigationController?.pushViewController(registerVC, animated: true)
+
+        if let navController = navigationController {
+            print("✅ navigationController найден")
+            navController.pushViewController(registerVC, animated: true)
+        } else {
+            print("❌ Ошибка: navigationController == nil")
+        }
     }
 
     private func showAlert(title: String, message: String) {

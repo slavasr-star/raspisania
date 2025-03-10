@@ -1,8 +1,12 @@
 import UIKit
+import FirebaseAuth
+import FirebaseFirestore
 
 class AdminPanelViewController: UIViewController {
     private let tableView = UITableView()
     private let addButton = UIButton(type: .system)
+    private let manageScheduleButton = UIButton(type: .system)
+    
     private var classes: [DanceClass] = []
 
     override func viewDidLoad() {
@@ -11,18 +15,9 @@ class AdminPanelViewController: UIViewController {
         fetchClasses()
     }
 
-    private func isAdmin() -> Bool {
-        return UserDefaults.standard.bool(forKey: "isAdmin")
-    }
-
     private func setupUI() {
         title = "Админ-панель"
         view.backgroundColor = .white
-
-        if !isAdmin() {
-            navigationController?.popViewController(animated: true)
-            return
-        }
 
         tableView.dataSource = self
         tableView.delegate = self
@@ -36,8 +31,16 @@ class AdminPanelViewController: UIViewController {
         addButton.translatesAutoresizingMaskIntoConstraints = false
         addButton.addTarget(self, action: #selector(addClassTapped), for: .touchUpInside)
 
+        manageScheduleButton.setTitle("Редактировать расписание", for: .normal)
+        manageScheduleButton.backgroundColor = UIColor.systemPink
+        manageScheduleButton.setTitleColor(.black, for: .normal)
+        manageScheduleButton.layer.cornerRadius = 10
+        manageScheduleButton.translatesAutoresizingMaskIntoConstraints = false
+        manageScheduleButton.addTarget(self, action: #selector(openManageSchedule), for: .touchUpInside)
+
         view.addSubview(tableView)
         view.addSubview(addButton)
+        view.addSubview(manageScheduleButton)
 
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
@@ -45,29 +48,38 @@ class AdminPanelViewController: UIViewController {
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: addButton.topAnchor, constant: -10),
 
-            addButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+            addButton.bottomAnchor.constraint(equalTo: manageScheduleButton.topAnchor, constant: -10),
             addButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             addButton.widthAnchor.constraint(equalToConstant: 200),
-            addButton.heightAnchor.constraint(equalToConstant: 50)
+            addButton.heightAnchor.constraint(equalToConstant: 50),
+
+            manageScheduleButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+            manageScheduleButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            manageScheduleButton.widthAnchor.constraint(equalToConstant: 250),
+            manageScheduleButton.heightAnchor.constraint(equalToConstant: 50)
         ])
     }
 
     private func fetchClasses() {
         DatabaseManager.shared.getAllClasses { [weak self] fetchedClasses in
-            guard let self = self else { return }
-            self.classes = fetchedClasses
-
             DispatchQueue.main.async {
-                self.tableView.reloadData()
+                self?.classes = fetchedClasses
+                self?.tableView.reloadData()
             }
         }
     }
+
     @objc private func addClassTapped() {
         let addVC = AddEditClassViewController()
         addVC.onClassSaved = { [weak self] in
             self?.fetchClasses()
         }
         navigationController?.pushViewController(addVC, animated: true)
+    }
+
+    @objc private func openManageSchedule() {
+        let vc = ManageScheduleViewController()
+        navigationController?.pushViewController(vc, animated: true)
     }
 }
 
@@ -94,18 +106,15 @@ extension AdminPanelViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == .delete {
             let classToDelete = classes[indexPath.row]
-            let classId = classToDelete.id // Просто присваиваем
-            
-            DatabaseManager.shared.deleteClass(id: classId) { success in
+            DatabaseManager.shared.deleteClass(id: classToDelete.id) { [weak self] success in
                 if success {
                     DispatchQueue.main.async {
-                        self.classes.remove(at: indexPath.row)
+                        self?.classes.remove(at: indexPath.row)
                         tableView.deleteRows(at: [indexPath], with: .automatic)
                     }
-                } else {
-                    print("❌ Ошибка при удалении занятия")
                 }
             }
         }
     }
 }
+

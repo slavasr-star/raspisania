@@ -1,3 +1,4 @@
+
 import UIKit
 import FirebaseAuth
 import FirebaseFirestore
@@ -64,21 +65,6 @@ class RegisterViewController: UIViewController {
                 print("Ошибка регистрации: \(error.localizedDescription)")
             } else {
                 print("Пользователь зарегистрирован")
-
-                if let userID = authResult?.user.uid {
-                    let userRef = Firestore.firestore().collection("users").document(userID)
-                    userRef.setData([
-                        "email": email,
-                        "isAdmin": false
-                    ]) { error in
-                        if let error = error {
-                            print("Ошибка при сохранении пользователя в Firestore: \(error.localizedDescription)")
-                        } else {
-                            print("Пользователь успешно добавлен в Firestore")
-                        }
-                    }
-                }
-
                 self.navigationController?.popViewController(animated: true)
             }
         }

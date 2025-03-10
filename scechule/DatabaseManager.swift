@@ -1,11 +1,11 @@
 import Firebase
+import FirebaseAuth
 import FirebaseFirestore
 
 struct User {
     let id: String
     let name: String
     let email: String
-    let password: String
     let role: String
 }
 
@@ -29,73 +29,66 @@ class DatabaseManager {
     private let db = Firestore.firestore()
     
     private init() {}
-
-    // MARK: - Работа с пользователями
     
-    func addUser(name: String, email: String, password: String, role: String = "user", completion: @escaping (Bool) -> Void) {
-        let userRef = db.collection("users").document()
-        userRef.setData([
-            "id": userRef.documentID,
-            "name": name,
-            "email": email,
-            "password": password,
-            "role": role
-        ]) { error in
+    // Регистрация пользователя
+    func registerUser(name: String, email: String, password: String, completion: @escaping (Bool) -> Void) {
+        Auth.auth().createUser(withEmail: email, password: password) { authResult, error in
             if let error = error {
-                print("❌ Ошибка добавления пользователя: \(error.localizedDescription)")
+                print("❌ Ошибка регистрации: \(error.localizedDescription)")
                 completion(false)
-            } else {
-                print("✅ Пользователь добавлен")
-                completion(true)
+                return
+            }
+            
+            guard let user = authResult?.user else {
+                completion(false)
+                return
+            }
+            
+            let userRef = self.db.collection("users").document(user.uid)
+            userRef.setData([
+                "id": user.uid,
+                "name": name,
+                "email": email,
+                "role": "user"
+            ]) { error in
+                if let error = error {
+                    print("❌ Ошибка сохранения пользователя: \(error.localizedDescription)")
+                    completion(false)
+                } else {
+                    completion(true)
+                }
             }
         }
     }
-
-    func getUserByEmail(email: String, completion: @escaping (User?) -> Void) {
-        db.collection("users").whereField("email", isEqualTo: email).getDocuments { snapshot, error in
-            if let error = error {
-                print("❌ Ошибка получения пользователя: \(error.localizedDescription)")
-                completion(nil)
-                return
-            }
-            guard let document = snapshot?.documents.first else {
-                completion(nil)
-                return
-            }
-            let data = document.data()
-            let user = User(
-                id: data["id"] as? String ?? "",
-                name: data["name"] as? String ?? "",
-                email: data["email"] as? String ?? "",
-                password: data["password"] as? String ?? "",
-                role: data["role"] as? String ?? "user"
-            )
-            completion(user)
-        }
-    }
-
+    
+    // Вход пользователя
     func loginUser(email: String, password: String, completion: @escaping (Bool) -> Void) {
-        getUserByEmail(email: email) { user in
-            if let user = user, user.password == password {
-                UserDefaults.standard.set(user.role, forKey: "userRole")
-                completion(true)
-            } else {
+        Auth.auth().signIn(withEmail: email, password: password) { authResult, error in
+            if let error = error {
+                print("❌ Ошибка входа: \(error.localizedDescription)")
                 completion(false)
+                return
+            }
+            
+            guard let user = authResult?.user else {
+                completion(false)
+                return
+            }
+            
+            self.getUserById(userId: user.uid) { user in
+                if let user = user {
+                    UserDefaults.standard.set(user.role, forKey: "userRole")
+                    completion(true)
+                } else {
+                    completion(false)
+                }
             }
         }
     }
-
-    func isAdmin() -> Bool {
-        let role = UserDefaults.standard.string(forKey: "userRole") ?? "user"
-        return role == "admin"
-    }
-
-    // MARK: - Работа с занятиями
-
-    func addClass(name: String, instructor: String, time: String, maxCapacity: Int, description: String, completion: @escaping (Bool) -> Void) {
-        let classRef = db.collection("classes").document()
-        classRef.setData([
-            "id": classRef.documentID,
+    func updateClass(id: String, name: String, instructor: String, time: String, maxCapacity: Int, description: String, completion: @escaping (Bool) -> Void) {
+        let classRef = db.collection("classes").document(id)
+        
+        classRef.updateData([
             "name": name,
             "instructor": instructor,
             "time": time,
@@ -103,12 +96,59 @@ class DatabaseManager {
             "description": description
         ]) { error in
             if let error = error {
-                print("❌ Ошибка добавления занятия: \(error.localizedDescription)")
+                print("❌ Ошибка обновления занятия: \(error.localizedDescription)")
                 completion(false)
             } else {
-                print("✅ Занятие добавлено")
                 completion(true)
             }
+        }
+    }
+
+    func getUserById(userId: String, completion: @escaping (User?) -> Void) {
+        db.collection("users").document(userId).getDocument { document, error in
+            if let error = error {
+                print("❌ Ошибка получения пользователя: \(error.localizedDescription)")
+                completion(nil)
+                return
+            }
+            
+            guard let data = document?.data() else {
+                completion(nil)
+                return
+            }
+            
+            let user = User(
+                id: userId,
+                name: data["name"] as? String ?? "",
+                email: data["email"] as? String ?? "",
+                role: data["role"] as? String ?? "user"
+            )
+            completion(user)
+        }
+    }
+    func deleteClass(id: String, completion: @escaping (Bool) -> Void) {
+        db.collection("classes").document(id).delete { error in
+            if let error = error {
+                print("❌ Ошибка удаления занятия: \(error.localizedDescription)")
+                completion(false)
+            } else {
+                completion(true)
+            }
+        }
+    }
+    func addClass(_ newClass: DanceClass) async -> Bool {
+        do {
+            try await db.collection("classes").document(newClass.id).setData([
+                "name": newClass.name,
+                "instructor": newClass.instructor,
+                "time": newClass.time,
+                "maxCapacity": newClass.maxCapacity,
+                "description": newClass.description
+            ])
+            return true
+        } catch {
+            print("❌ Ошибка добавления занятия: \(error.localizedDescription)")
+            return false
         }
     }
 
@@ -119,10 +159,11 @@ class DatabaseManager {
                 completion([])
                 return
             }
+            
             let classes = snapshot?.documents.compactMap { document -> DanceClass? in
                 let data = document.data()
                 return DanceClass(
-                    id: data["id"] as? String ?? "",
+                    id: document.documentID,
                     name: data["name"] as? String ?? "",
                     instructor: data["instructor"] as? String ?? "",
                     time: data["time"] as? String ?? "",
@@ -130,54 +171,24 @@ class DatabaseManager {
                     description: data["description"] as? String ?? ""
                 )
             } ?? []
+            
             completion(classes)
         }
     }
-
-    func deleteClass(id: String, completion: @escaping (Bool) -> Void) {
-        db.collection("classes").document(id).delete { error in
-            if let error = error {
-                print("❌ Ошибка удаления занятия: \(error.localizedDescription)")
-                completion(false)
-            } else {
-                print("✅ Занятие удалено")
-                completion(true)
-            }
-        }
-    }
-
-    func updateClass(_ danceClass: DanceClass, completion: @escaping (Bool) -> Void) {
-        db.collection("classes").document(danceClass.id).updateData([
-            "name": danceClass.name,
-            "instructor": danceClass.instructor,
-            "time": danceClass.time,
-            "maxCapacity": danceClass.maxCapacity,
-            "description": danceClass.description
-        ]) { error in
-            if let error = error {
-                print("❌ Ошибка обновления занятия: \(error.localizedDescription)")
-                completion(false)
-            } else {
-                print("✅ Занятие обновлено")
-                completion(true)
-            }
-        }
-    }
-
-    // MARK: - Записи на занятия
-
     func enrollUser(userId: String, classId: String, completion: @escaping (Bool) -> Void) {
-        let enrollmentRef = db.collection("enrollments").document()
-        enrollmentRef.setData([
-            "id": enrollmentRef.documentID,
+        let enrollmentRef = db.collection("enrollments").document("\(userId)_\(classId)")
+        
+        let data: [String: Any] = [
             "userId": userId,
-            "classId": classId
-        ]) { error in
+            "classId": classId,
+            "timestamp": Timestamp(date: Date())
+        ]
+        
+        enrollmentRef.setData(data) { error in
             if let error = error {
-                print("❌ Ошибка записи на занятие: \(error.localizedDescription)")
+                print("Ошибка при записи в Firestore: \(error.localizedDescription)")
                 completion(false)
             } else {
-                print("✅ Пользователь записан на занятие")
                 completion(true)
             }
         }
@@ -186,7 +197,7 @@ class DatabaseManager {
     func getUserBookings(userId: String, completion: @escaping ([(id: String, className: String, instructor: String, time: String)]) -> Void) {
         db.collection("enrollments").whereField("userId", isEqualTo: userId).getDocuments { snapshot, error in
             if let error = error {
-                print("❌ Ошибка получения бронирований: \(error.localizedDescription)")
+                print("❌ Ошибка получения записей: \(error.localizedDescription)")
                 completion([])
                 return
             }
@@ -194,31 +205,45 @@ class DatabaseManager {
             let enrollments = snapshot?.documents.compactMap { document -> Enrollment? in
                 let data = document.data()
                 return Enrollment(
-                    id: data["id"] as? String ?? "",
+                    id: document.documentID,
                     userId: data["userId"] as? String ?? "",
                     classId: data["classId"] as? String ?? ""
                 )
             } ?? []
 
-            var bookings: [(String, String, String, String)] = []
-
-            let group = DispatchGroup()
-            for enrollment in enrollments {
-                group.enter()
-                self.db.collection("classes").document(enrollment.classId).getDocument { classSnapshot, _ in
-                    if let classData = classSnapshot?.data() {
-                        bookings.append((
-                            enrollment.id,
-                            classData["name"] as? String ?? "",
-                            classData["instructor"] as? String ?? "",
-                            classData["time"] as? String ?? ""
-                        ))
-                    }
-                    group.leave()
-                }
+            let classIds = enrollments.map { $0.classId }
+            
+        
+            guard !classIds.isEmpty else {
+                completion([])
+                return
             }
 
-            group.notify(queue: .main) {
+            self.db.collection("classes").whereField(FieldPath.documentID(), in: classIds).getDocuments { classSnapshot, error in
+                if let error = error {
+                    print("❌ Ошибка получения данных о занятиях: \(error.localizedDescription)")
+                    completion([])
+                    return
+                }
+
+                let classMap = classSnapshot?.documents.reduce(into: [String: DanceClass]()) { result, document in
+                    let data = document.data()
+                    let danceClass = DanceClass(
+                        id: document.documentID,
+                        name: data["name"] as? String ?? "",
+                        instructor: data["instructor"] as? String ?? "",
+                        time: data["time"] as? String ?? "",
+                        maxCapacity: data["maxCapacity"] as? Int ?? 0,
+                        description: data["description"] as? String ?? ""
+                    )
+                    result[danceClass.id] = danceClass
+                } ?? [:]
+
+                let bookings = enrollments.compactMap { enrollment -> (String, String, String, String)? in
+                    guard let danceClass = classMap[enrollment.classId] else { return nil }
+                    return (enrollment.id, danceClass.name, danceClass.instructor, danceClass.time)
+                }
+
                 completion(bookings)
             }
         }

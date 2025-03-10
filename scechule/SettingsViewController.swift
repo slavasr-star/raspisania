@@ -44,15 +44,21 @@ class SettingsViewController: UIViewController {
     }
 
     private func performLogout() {
-        AuthManager.shared.logout()
-        
-        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = scene.windows.first {
-            let loginVC = LoginViewController()
-            let navController = UINavigationController(rootViewController: loginVC)
-            navController.setNavigationBarHidden(true, animated: false) // Скрываем навбар на экране входа
-            window.rootViewController = navController
-            window.makeKeyAndVisible()
+        AuthManager.shared.logout { success, error in
+            if success {
+                DispatchQueue.main.async {
+                    if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                       let window = scene.windows.first {
+                        let loginVC = LoginViewController()
+                        let navController = UINavigationController(rootViewController: loginVC)
+                        navController.setNavigationBarHidden(true, animated: false) // Скрываем навбар на экране входа
+                        window.rootViewController = navController
+                        window.makeKeyAndVisible()
+                    }
+                }
+            } else {
+                print("Ошибка выхода: \(error ?? "Неизвестная ошибка")")
+            }
         }
     }
 }
