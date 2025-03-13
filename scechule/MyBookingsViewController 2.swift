@@ -1,5 +1,5 @@
+
 import UIKit
-import FirebaseAuth
 
 class MyBookingsViewController: UIViewController {
     private var bookings: [DanceClass] = []

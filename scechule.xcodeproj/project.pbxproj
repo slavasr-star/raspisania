@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		939FDBF32D82CBF800591239 /* Array+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 939FDBF22D82CBF800591239 /* Array+Extensions.swift */; };
 		93D82EC92D6C3CC800249E43 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93D82EC82D6C3CC800249E43 /* AppDelegate.swift */; };
 		93D82ECB2D6C3CC800249E43 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93D82ECA2D6C3CC800249E43 /* SceneDelegate.swift */; };
 		93D82ED22D6C3CCB00249E43 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 93D82ED12D6C3CCB00249E43 /* Assets.xcassets */; };
@@ -58,6 +59,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		939FDBF22D82CBF800591239 /* Array+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Array+Extensions.swift"; sourceTree = "<group>"; };
 		93D82EC52D6C3CC800249E43 /* scechule.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = scechule.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		93D82EC82D6C3CC800249E43 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		93D82ECA2D6C3CC800249E43 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -142,6 +144,7 @@
 			children = (
 				93D82EC82D6C3CC800249E43 /* AppDelegate.swift */,
 				93D82EDF2D6C3E5100249E43 /* DatabaseManager.swift */,
+				939FDBF22D82CBF800591239 /* Array+Extensions.swift */,
 				93D82F112D6C52FC00249E43 /* ClassesListViewController.swift */,
 				93D82F132D6C645300249E43 /* ClassModel.swift */,
 				93D82F152D6C647E00249E43 /* UserModel.swift */,
@@ -272,6 +275,7 @@
 				93DF5D312D78CFBB00A78EF3 /* ManageScheduleViewController.swift in Sources */,
 				93D82F142D6C645300249E43 /* ClassModel.swift in Sources */,
 				93D82F2E2D6CB88E00249E43 /* Extensions.swift in Sources */,
+				939FDBF32D82CBF800591239 /* Array+Extensions.swift in Sources */,
 				93D82F1E2D6C8D6B00249E43 /* RegisterViewController.swift in Sources */,
 				93D82F342D6CBC7700249E43 /* CustomTableViewCell.swift in Sources */,
 				93D82F162D6C647E00249E43 /* UserModel.swift in Sources */,

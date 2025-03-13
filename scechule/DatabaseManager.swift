@@ -103,7 +103,7 @@ class DatabaseManager {
             }
         }
     }
-
+    
     func getUserById(userId: String, completion: @escaping (User?) -> Void) {
         db.collection("users").document(userId).getDocument { document, error in
             if let error = error {
@@ -151,7 +151,7 @@ class DatabaseManager {
             return false
         }
     }
-
+    
     func getAllClasses(completion: @escaping ([DanceClass]) -> Void) {
         db.collection("classes").getDocuments { snapshot, error in
             if let error = error {
@@ -193,57 +193,70 @@ class DatabaseManager {
             }
         }
     }
-
-    func getUserBookings(userId: String, completion: @escaping ([(id: String, className: String, instructor: String, time: String)]) -> Void) {
+    
+    func getUserBookings(userId: String, completion: @escaping ([(id: String, className: String, instructor: String, time: String, maxCapacity: Int, description: String)]) -> Void) {
+        print("Запрос записей для userId: \(userId)")
+        
         db.collection("enrollments").whereField("userId", isEqualTo: userId).getDocuments { snapshot, error in
             if let error = error {
-                print("❌ Ошибка получения записей: \(error.localizedDescription)")
+                print("Ошибка получения записей: \(error.localizedDescription)")
                 completion([])
                 return
             }
-
-            let enrollments = snapshot?.documents.compactMap { document -> Enrollment? in
-                let data = document.data()
-                return Enrollment(
-                    id: document.documentID,
-                    userId: data["userId"] as? String ?? "",
-                    classId: data["classId"] as? String ?? ""
-                )
-            } ?? []
-
-            let classIds = enrollments.map { $0.classId }
             
-        
-            guard !classIds.isEmpty else {
+            guard let documents = snapshot?.documents, !documents.isEmpty else {
+                print("Нет записей у пользователя")
                 completion([])
                 return
             }
-
+            
+            print("Найдено \(documents.count) записей в enrollments")
+            
+            let enrollments = documents.compactMap { document -> Enrollment? in
+                let data = document.data()
+                guard let classId = data["classId"] as? String else { return nil }
+                return Enrollment(id: document.documentID, userId: userId, classId: classId)
+            }
+            
+            let classIds = enrollments.map { $0.classId }
+            print("Найдены classIds: \(classIds)")
+            
+            guard !classIds.isEmpty else {
+                print("classIds пуст, пропускаем запрос к classes")
+                completion([])
+                return
+            }
+            
             self.db.collection("classes").whereField(FieldPath.documentID(), in: classIds).getDocuments { classSnapshot, error in
                 if let error = error {
-                    print("❌ Ошибка получения данных о занятиях: \(error.localizedDescription)")
+                    print("Ошибка получения данных о занятиях: \(error.localizedDescription)")
                     completion([])
                     return
                 }
-
+                
                 let classMap = classSnapshot?.documents.reduce(into: [String: DanceClass]()) { result, document in
                     let data = document.data()
-                    let danceClass = DanceClass(
+                    result[document.documentID] = DanceClass(
                         id: document.documentID,
-                        name: data["name"] as? String ?? "",
-                        instructor: data["instructor"] as? String ?? "",
-                        time: data["time"] as? String ?? "",
-                        maxCapacity: data["maxCapacity"] as? Int ?? 0,
-                        description: data["description"] as? String ?? ""
+                        name: data["name"] as? String ?? "Без названия",
+                        instructor: data["instructor"] as? String ?? "Неизвестно",
+                        time: data["time"] as? String ?? "Не указано",
+                        maxCapacity: data["maxCapacity"] as? Int ?? 10,
+                        description: data["description"] as? String ?? "Нет описания"
                     )
-                    result[danceClass.id] = danceClass
                 } ?? [:]
-
-                let bookings = enrollments.compactMap { enrollment -> (String, String, String, String)? in
-                    guard let danceClass = classMap[enrollment.classId] else { return nil }
-                    return (enrollment.id, danceClass.name, danceClass.instructor, danceClass.time)
+                
+                print("Загруженные занятия: \(classMap)")
+                
+                let bookings = enrollments.compactMap { enrollment -> (String, String, String, String, Int, String)? in
+                    guard let danceClass = classMap[enrollment.classId] else {
+                        print("Не найдено занятие для classId: \(enrollment.classId)")
+                        return nil
+                    }
+                    return (enrollment.id, danceClass.name, danceClass.instructor, danceClass.time, danceClass.maxCapacity, danceClass.description)
                 }
-
+                
+                print("Итоговые записи пользователя: \(bookings)")
                 completion(bookings)
             }
         }

@@ -1,0 +1,29 @@
+DatabaseManager.shared.getUserBookings(userId: userId) { [weak self] bookings in
+    guard let self = self else { return }
+
+    print("Полученные записи из базы: \(bookings)")
+
+    self.bookings = bookings.map {
+        DanceClass(
+            id: $0.0,
+            name: $0.1,
+            instructor: $0.2,
+            time: $0.3,
+            maxCapacity: 10,
+            description: "Нет описания"
+        )
+    }
+
+    DispatchQueue.main.async {
+        print("Обновляем интерфейс, записей: \(self.bookings.count)")
+
+        self.tableView.isHidden = self.bookings.isEmpty
+        self.tableView.reloadData()
+
+        UIView.transition(with: self.tableView, duration: 0.3, options: .transitionCrossDissolve, animations: {
+            self.tableView.reloadData()
+        }, completion: nil)
+
+        print("tableView обновлен, isHidden = \(self.tableView.isHidden)")
+    }
+}
