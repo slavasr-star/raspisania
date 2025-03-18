@@ -261,4 +261,89 @@ class DatabaseManager {
             }
         }
     }
+    
+    func getPastBookings(userId: String, completion: @escaping ([(id: String, className: String, instructor: String, time: String, maxCapacity: Int, description: String)]) -> Void) {
+        let now = Timestamp(date: Date())
+
+        db.collection("pastBookings")
+            .whereField("userId", isEqualTo: userId)
+            .whereField("timestamp", isLessThan: now)
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    print("Ошибка получения прошедших записей: \(error.localizedDescription)")
+                    completion([])
+                    return
+                }
+
+                let pastBookings = snapshot?.documents.compactMap { document -> (String, String, String, String, Int, String)? in
+                    let data = document.data()
+                    guard data["timestamp"] is Timestamp else {
+                        print("Пропущена запись без timestamp: \(document.documentID)")
+                        return nil
+                    }
+                    return (
+                        document.documentID,
+                        data["className"] as? String ?? "Без названия",
+                        data["instructor"] as? String ?? "Неизвестно",
+                        data["time"] as? String ?? "Не указано",
+                        data["maxCapacity"] as? Int ?? 10,
+                        data["description"] as? String ?? "Нет описания"
+                    )
+                } ?? []
+
+                completion(pastBookings)
+            }
+    }
+
+    func movePastBookings(userId: String, completion: @escaping (Bool) -> Void) {
+        db.collection("enrollments")
+            .whereField("userId", isEqualTo: userId)
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    print("Ошибка получения записей для переноса: \(error.localizedDescription)")
+                    completion(false)
+                    return
+                }
+
+                guard let documents = snapshot?.documents, !documents.isEmpty else {
+                    print("Нет записей для переноса")
+                    completion(false)
+                    return
+                }
+
+                let batch = self.db.batch()
+                var movedCount = 0
+
+                for document in documents {
+                    let data = document.data()
+                    guard let classTime = data["timestamp"] as? Timestamp else {
+                        print("Пропущена запись без timestamp: \(document.documentID)")
+                        continue
+                    }
+
+                    if classTime.dateValue() < Date() {
+                        let pastBookingRef = self.db.collection("pastBookings").document(document.documentID)
+                        batch.setData(data, forDocument: pastBookingRef)
+                        batch.deleteDocument(document.reference)
+                        movedCount += 1
+                    }
+                }
+
+                if movedCount > 0 {
+                    batch.commit { error in
+                        if let error = error {
+                            print("Ошибка при перемещении записей: \(error.localizedDescription)")
+                            completion(false)
+                        } else {
+                            print("Перемещено \(movedCount) записей в pastBookings")
+                            completion(true)
+                        }
+                    }
+                } else {
+                    print("Нет записей для переноса")
+                    completion(false)
+                }
+            }
+    }
+
 }

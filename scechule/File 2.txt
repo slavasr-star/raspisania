@@ -1,0 +1,52 @@
+func movePastBookings(userId: String, completion: @escaping (Bool) -> Void) {
+    let now = Timestamp(date: Date())
+
+    db.collection("enrollments")
+        .whereField("userId", isEqualTo: userId)
+        .getDocuments { snapshot, error in
+            if let error = error {
+                print("Ошибка получения записей для переноса: \(error.localizedDescription)")
+                completion(false)
+                return
+            }
+
+            guard let documents = snapshot?.documents, !documents.isEmpty else {
+                print("Нет записей для переноса")
+                completion(false)
+                return
+            }
+
+            let batch = Firestore.firestore().batch()
+            var movedCount = 0
+
+            for document in documents {
+                let data = document.data()
+                guard let classTime = data["timestamp"] as? Timestamp else {
+                    print("⛔ Пропущена запись без timestamp: \(document.documentID)")
+                    continue
+                }
+
+                if classTime.dateValue() < Date() {
+                    let pastBookingRef = Firestore.firestore().collection("pastBookings").document(document.documentID)
+                    batch.setData(data, forDocument: pastBookingRef)
+                    batch.deleteDocument(document.reference)
+                    movedCount += 1
+                }
+            }
+
+            if movedCount > 0 {
+                batch.commit { error in
+                    if let error = error {
+                        print("Ошибка при перемещении записей: \(error.localizedDescription)")
+                        completion(false)
+                    } else {
+                        print("✅ Перемещено \(movedCount) записей в pastBookings")
+                        completion(true)
+                    }
+                }
+            } else {
+                print("Нет записей для переноса")
+                completion(false)
+            }
+        }
+}
