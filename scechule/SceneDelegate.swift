@@ -17,7 +17,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             if Auth.auth().currentUser != nil {
                 self.window?.rootViewController = self.createTabBarController()
             } else {
-                let loginVC = UINavigationController(rootViewController: LoginViewController()) // ✅ Обернули в NavigationController
+                let loginVC = UINavigationController(rootViewController: LoginViewController())
+                
                 self.window?.rootViewController = loginVC
             }
             self.window?.makeKeyAndVisible()
@@ -43,6 +44,16 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func sceneDidDisconnect(_ scene: UIScene) {}
     func sceneDidBecomeActive(_ scene: UIScene) {}
     func sceneWillResignActive(_ scene: UIScene) {}
-    func sceneWillEnterForeground(_ scene: UIScene) {}
     func sceneDidEnterBackground(_ scene: UIScene) {}
+    func sceneWillEnterForeground(_ scene: UIScene) {
+        guard (Auth.auth().currentUser?.uid) != nil else { return }
+
+        DatabaseManager.shared.autoCompleteTrainings { success in
+            if success {
+                print("Тренировки завершены и перенесены в прошедшие")
+            } else {
+                print("Нет новых завершенных тренировок")
+            }
+        }
+    }
 }

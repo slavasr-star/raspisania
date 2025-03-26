@@ -22,7 +22,7 @@ class PastBookingsViewController: UIViewController {
             if success {
                 self?.fetchPastBookings()
             } else {
-                print("❌ Перемещение записей не выполнено")
+                print("Перемещение записей не выполнено")
                 self?.fetchPastBookings()
             }
         }

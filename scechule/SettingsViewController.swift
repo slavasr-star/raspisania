@@ -11,11 +11,11 @@ class SettingsViewController: UIViewController {
     }
 
     private func setupUI() {
-        title = "Настройки"
+        title = "Профиль"
         view.backgroundColor = .white
 
         pastBookingsButton.setTitle("Мои прошедшие записи", for: .normal)
-        pastBookingsButton.backgroundColor = .systemPink
+        pastBookingsButton.backgroundColor = .systemGray
         pastBookingsButton.setTitleColor(.black, for: .normal)
         pastBookingsButton.layer.cornerRadius = 10
         pastBookingsButton.addTarget(self, action: #selector(openPastBookings), for: .touchUpInside)

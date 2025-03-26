@@ -34,7 +34,7 @@ class DatabaseManager {
     func registerUser(name: String, email: String, password: String, completion: @escaping (Bool) -> Void) {
         Auth.auth().createUser(withEmail: email, password: password) { authResult, error in
             if let error = error {
-                print("❌ Ошибка регистрации: \(error.localizedDescription)")
+                print("Ошибка регистрации: \(error.localizedDescription)")
                 completion(false)
                 return
             }
@@ -52,7 +52,7 @@ class DatabaseManager {
                 "role": "user"
             ]) { error in
                 if let error = error {
-                    print("❌ Ошибка сохранения пользователя: \(error.localizedDescription)")
+                    print("Ошибка сохранения пользователя: \(error.localizedDescription)")
                     completion(false)
                 } else {
                     completion(true)
@@ -65,7 +65,7 @@ class DatabaseManager {
     func loginUser(email: String, password: String, completion: @escaping (Bool) -> Void) {
         Auth.auth().signIn(withEmail: email, password: password) { authResult, error in
             if let error = error {
-                print("❌ Ошибка входа: \(error.localizedDescription)")
+                print("Ошибка входа: \(error.localizedDescription)")
                 completion(false)
                 return
             }
@@ -129,7 +129,7 @@ class DatabaseManager {
     func deleteClass(id: String, completion: @escaping (Bool) -> Void) {
         db.collection("classes").document(id).delete { error in
             if let error = error {
-                print("❌ Ошибка удаления занятия: \(error.localizedDescription)")
+                print("Ошибка удаления занятия: \(error.localizedDescription)")
                 completion(false)
             } else {
                 completion(true)
@@ -147,7 +147,7 @@ class DatabaseManager {
             ])
             return true
         } catch {
-            print("❌ Ошибка добавления занятия: \(error.localizedDescription)")
+            print("Ошибка добавления занятия: \(error.localizedDescription)")
             return false
         }
     }
@@ -155,7 +155,7 @@ class DatabaseManager {
     func getAllClasses(completion: @escaping ([DanceClass]) -> Void) {
         db.collection("classes").getDocuments { snapshot, error in
             if let error = error {
-                print("❌ Ошибка получения занятий: \(error.localizedDescription)")
+                print("Ошибка получения занятий: \(error.localizedDescription)")
                 completion([])
                 return
             }
@@ -344,6 +344,72 @@ class DatabaseManager {
                     completion(false)
                 }
             }
+    }
+    func autoCompleteTrainings(completion: @escaping (Bool) -> Void) {
+        _ = Timestamp(date: Date())
+
+        db.collection("enrollments").getDocuments { snapshot, error in
+            if let error = error {
+                print("Ошибка получения записей: \(error.localizedDescription)")
+                completion(false)
+                return
+            }
+
+            guard let documents = snapshot?.documents, !documents.isEmpty else {
+                print("Нет записей для обработки")
+                completion(false)
+                return
+            }
+
+            let batch = self.db.batch()
+            var movedCount = 0
+
+            for document in documents {
+                let data = document.data()
+                guard let classId = data["classId"] as? String else { continue }
+
+                // Получаем время тренировки
+                self.db.collection("classes").document(classId).getDocument { classDoc, error in
+                    if let error = error {
+                        print("Ошибка получения занятия: \(error.localizedDescription)")
+                        return
+                    }
+
+                    guard let classData = classDoc?.data(),
+                          let classTimeString = classData["time"] as? String,
+                          let classTime = self.convertToDate(classTimeString) else { return }
+
+                    if classTime < Date() {
+                        // Переносим в pastBookings
+                        let pastBookingRef = self.db.collection("pastBookings").document(document.documentID)
+                        batch.setData(data, forDocument: pastBookingRef)
+                        batch.deleteDocument(document.reference)
+                        movedCount += 1
+                    }
+
+                    if movedCount > 0 {
+                        batch.commit { error in
+                            if let error = error {
+                                print("Ошибка при перемещении записей: \(error.localizedDescription)")
+                                completion(false)
+                            } else {
+                                print("Перемещено \(movedCount) записей в pastBookings")
+                                completion(true)
+                            }
+                        }
+                    } else {
+                        completion(false)
+                    }
+                }
+            }
+        }
+    }
+
+    // Функция для конвертации строки времени в Date
+    private func convertToDate(_ timeString: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        return formatter.date(from: timeString)
     }
 
 }

@@ -145,6 +145,7 @@
 			isa = PBXGroup;
 			children = (
 				93D82EC82D6C3CC800249E43 /* AppDelegate.swift */,
+				93D82ECA2D6C3CC800249E43 /* SceneDelegate.swift */,
 				93D82EDF2D6C3E5100249E43 /* DatabaseManager.swift */,
 				939FDBF82D82F66800591239 /* PastBookingsViewController.swift */,
 				939FDBF22D82CBF800591239 /* Array+Extensions.swift */,
@@ -152,7 +153,6 @@
 				93D82F132D6C645300249E43 /* ClassModel.swift */,
 				93D82F152D6C647E00249E43 /* UserModel.swift */,
 				93D82F172D6C64C700249E43 /* Enrollment.swift */,
-				93D82ECA2D6C3CC800249E43 /* SceneDelegate.swift */,
 				93D82F192D6C8C4F00249E43 /* ClassDetailViewController.swift */,
 				93D82F1B2D6C8CF300249E43 /* LoginViewController.swift */,
 				93D82F1D2D6C8D6B00249E43 /* RegisterViewController.swift */,
