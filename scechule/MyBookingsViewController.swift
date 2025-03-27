@@ -1,5 +1,6 @@
 import UIKit
 import FirebaseAuth
+import FirebaseFirestore
 
 class MyBookingsViewController: UIViewController {
     private var bookings: [DanceClass] = []
@@ -19,7 +20,7 @@ class MyBookingsViewController: UIViewController {
         tableView.delegate = self
         tableView.register(CustomTableViewCell.self, forCellReuseIdentifier: "bookingCell")
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.isHidden = true // Скрываем таблицу до загрузки данных
+        tableView.isHidden = true
 
         view.addSubview(tableView)
 
@@ -44,12 +45,20 @@ class MyBookingsViewController: UIViewController {
 
             print("Полученные записи из базы: \(bookings)")
 
-            self.bookings = bookings.map {
-                DanceClass(
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss" // Подстрой под свой формат даты
+
+            self.bookings = bookings.compactMap {
+                guard let date = dateFormatter.date(from: $0.3) else {
+                    print("Ошибка конвертации даты: \($0.3)")
+                    return nil
+                }
+
+                return DanceClass(
                     id: $0.0,
                     name: $0.1,
                     instructor: $0.2,
-                    time: $0.3,
+                    time: Timestamp(date: date),
                     maxCapacity: $0.4,
                     description: $0.5
                 )
@@ -57,8 +66,6 @@ class MyBookingsViewController: UIViewController {
 
             DispatchQueue.main.async {
                 self.tableView.isHidden = self.bookings.isEmpty
-                self.tableView.reloadData()
-
                 UIView.transition(with: self.tableView, duration: 0.3, options: .transitionCrossDissolve, animations: {
                     self.tableView.reloadData()
                 }, completion: nil)

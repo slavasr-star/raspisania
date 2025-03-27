@@ -50,11 +50,11 @@ class ClassesListViewController: UIViewController {
                 let data = doc.data()
                 guard let name = data["name"] as? String,
                       let instructor = data["instructor"] as? String,
-                      let time = data["time"] as? String,
+                      let timestamp = data["time"] as? Timestamp,
                       let maxCapacity = data["maxCapacity"] as? Int,
                       let description = data["description"] as? String else { return nil }
                 
-                return DanceClass(id: doc.documentID, name: name, instructor: instructor, time: time, maxCapacity: maxCapacity, description: description)
+                return DanceClass(id: doc.documentID, name: name, instructor: instructor, time: timestamp, maxCapacity: maxCapacity, description: description)
             }
 
             DispatchQueue.main.async {

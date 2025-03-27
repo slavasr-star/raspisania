@@ -13,7 +13,7 @@ struct DanceClass {
     let id: String
     let name: String
     let instructor: String
-    let time: String
+    let time: Timestamp
     let maxCapacity: Int
     let description: String
 }
@@ -85,25 +85,26 @@ class DatabaseManager {
             }
         }
     }
-    func updateClass(id: String, name: String, instructor: String, time: String, maxCapacity: Int, description: String, completion: @escaping (Bool) -> Void) {
-        let classRef = db.collection("classes").document(id)
+    func updateClass(id: String, name: String, instructor: String, time: String, maxCapacity: Int, description: String, completion: @escaping (Error?) -> Void) {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         
-        classRef.updateData([
-            "name": name,
-            "instructor": instructor,
-            "time": time,
-            "maxCapacity": maxCapacity,
-            "description": description
-        ]) { error in
-            if let error = error {
-                print("❌ Ошибка обновления занятия: \(error.localizedDescription)")
-                completion(false)
-            } else {
-                completion(true)
+        if let date = dateFormatter.date(from: time) {
+            let timestamp = Timestamp(date: date)
+            let classRef = db.collection("classes").document(id)
+            classRef.updateData([
+                "name": name,
+                "instructor": instructor,
+                "time": timestamp,
+                "maxCapacity": maxCapacity,
+                "description": description
+            ]) { error in
+                completion(error)
             }
+        } else {
+            completion(NSError(domain: "Invalid Date Format", code: 400, userInfo: nil))
         }
     }
-    
     func getUserById(userId: String, completion: @escaping (User?) -> Void) {
         db.collection("users").document(userId).getDocument { document, error in
             if let error = error {
@@ -162,11 +163,14 @@ class DatabaseManager {
             
             let classes = snapshot?.documents.compactMap { document -> DanceClass? in
                 let data = document.data()
+                
+                let timestamp = data["time"] as? Timestamp ?? Timestamp(date: Date())
+                
                 return DanceClass(
                     id: document.documentID,
                     name: data["name"] as? String ?? "",
                     instructor: data["instructor"] as? String ?? "",
-                    time: data["time"] as? String ?? "",
+                    time: timestamp, // Передаем Timestamp
                     maxCapacity: data["maxCapacity"] as? Int ?? 0,
                     description: data["description"] as? String ?? ""
                 )
@@ -175,6 +179,8 @@ class DatabaseManager {
             completion(classes)
         }
     }
+
+
     func enrollUser(userId: String, classId: String, completion: @escaping (Bool) -> Void) {
         let enrollmentRef = db.collection("enrollments").document("\(userId)_\(classId)")
         
@@ -236,11 +242,18 @@ class DatabaseManager {
                 
                 let classMap = classSnapshot?.documents.reduce(into: [String: DanceClass]()) { result, document in
                     let data = document.data()
+                    
+                    // Преобразуем Timestamp в строку (например, в формат "dd.MM.yyyy HH:mm")
+                    let timestamp = data["time"] as? Timestamp ?? Timestamp(date: Date())
+                    let dateFormatter = DateFormatter()
+                    dateFormatter.dateFormat = "dd.MM.yyyy HH:mm"
+                    let formattedTime = dateFormatter.string(from: timestamp.dateValue())
+
                     result[document.documentID] = DanceClass(
                         id: document.documentID,
                         name: data["name"] as? String ?? "Без названия",
                         instructor: data["instructor"] as? String ?? "Неизвестно",
-                        time: data["time"] as? String ?? "Не указано",
+                        time: data["time"] as? Timestamp ?? Timestamp(date: Date()),
                         maxCapacity: data["maxCapacity"] as? Int ?? 10,
                         description: data["description"] as? String ?? "Нет описания"
                     )
@@ -253,7 +266,7 @@ class DatabaseManager {
                         print("Не найдено занятие для classId: \(enrollment.classId)")
                         return nil
                     }
-                    return (enrollment.id, danceClass.name, danceClass.instructor, danceClass.time, danceClass.maxCapacity, danceClass.description)
+                    return (enrollment.id, danceClass.name, danceClass.instructor, danceClass.time, danceClass.maxCapacity, danceClass.description) as? (String, String, String, String, Int, String)
                 }
                 
                 print("Итоговые записи пользователя: \(bookings)")
@@ -261,7 +274,7 @@ class DatabaseManager {
             }
         }
     }
-    
+
     func getPastBookings(userId: String, completion: @escaping ([(id: String, className: String, instructor: String, time: String, maxCapacity: Int, description: String)]) -> Void) {
         let now = Timestamp(date: Date())
 
@@ -277,15 +290,25 @@ class DatabaseManager {
 
                 let pastBookings = snapshot?.documents.compactMap { document -> (String, String, String, String, Int, String)? in
                     let data = document.data()
-                    guard data["timestamp"] is Timestamp else {
+                    
+                    // Проверяем, есть ли timestamp
+                    guard let timestamp = data["timestamp"] as? Timestamp else {
                         print("Пропущена запись без timestamp: \(document.documentID)")
                         return nil
                     }
+                    
+                    // Преобразуем Timestamp в строку
+                    let formattedTime = DateFormatter.localizedString(
+                        from: timestamp.dateValue(),
+                        dateStyle: .medium,
+                        timeStyle: .short
+                    )
+
                     return (
                         document.documentID,
                         data["className"] as? String ?? "Без названия",
                         data["instructor"] as? String ?? "Неизвестно",
-                        data["time"] as? String ?? "Не указано",
+                        formattedTime,  // Теперь `time` корректно преобразуется в строку
                         data["maxCapacity"] as? Int ?? 10,
                         data["description"] as? String ?? "Нет описания"
                     )
@@ -294,6 +317,7 @@ class DatabaseManager {
                 completion(pastBookings)
             }
     }
+
 
     func movePastBookings(userId: String, completion: @escaping (Bool) -> Void) {
         db.collection("enrollments")
@@ -316,8 +340,8 @@ class DatabaseManager {
 
                 for document in documents {
                     let data = document.data()
-                    guard let classTime = data["timestamp"] as? Timestamp else {
-                        print("Пропущена запись без timestamp: \(document.documentID)")
+                    guard let classTime = data["time"] as? Timestamp else {
+                        print("Пропущена запись без time: \(document.documentID)")
                         continue
                     }
 
@@ -345,6 +369,39 @@ class DatabaseManager {
                 }
             }
     }
+
+    func saveTraining(dateString: String) {
+        let db = Firestore.firestore()
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
+        dateFormatter.timeZone = TimeZone.current
+        
+        if let date = dateFormatter.date(from: dateString) {
+            let timestamp = Timestamp(date: date)
+            
+            let data: [String: Any] = [
+                "name": "Йога",
+                "instructor": "Анара",
+                "maxCapacity": 20,
+                "description": "",
+                "time": timestamp  
+            ]
+            
+            let db = Firestore.firestore()
+            db.collection("classes").addDocument(data: data) { error in
+                if let error = error {
+                    print("Ошибка сохранения: \(error.localizedDescription)")
+                } else {
+                    print("Тренировка успешно сохранена")
+                }
+            }
+        } else {
+            print("Ошибка: неправильный формат даты")
+        }
+    }
+
+
     func autoCompleteTrainings(completion: @escaping (Bool) -> Void) {
         _ = Timestamp(date: Date())
 
@@ -404,8 +461,6 @@ class DatabaseManager {
             }
         }
     }
-
-    // Функция для конвертации строки времени в Date
     private func convertToDate(_ timeString: String) -> Date? {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm"

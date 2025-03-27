@@ -1,4 +1,5 @@
 import UIKit
+import FirebaseFirestore
 
 class PastBookingsViewController: UIViewController {
     private var pastBookings: [DanceClass] = []
@@ -19,12 +20,7 @@ class PastBookingsViewController: UIViewController {
         
         guard let userId = UserDefaults.standard.string(forKey: "userId") else { return }
         DatabaseManager.shared.movePastBookings(userId: userId) { [weak self] success in
-            if success {
-                self?.fetchPastBookings()
-            } else {
-                print("Перемещение записей не выполнено")
-                self?.fetchPastBookings()
-            }
+            self?.fetchPastBookings()
         }
     }
 
@@ -62,12 +58,20 @@ class PastBookingsViewController: UIViewController {
         DatabaseManager.shared.getPastBookings(userId: userId) { [weak self] bookings in
             guard let self = self else { return }
 
-            self.pastBookings = bookings.map {
-                DanceClass(
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss" // Убедись, что формат соответствует хранимым данным
+
+            self.pastBookings = bookings.compactMap {
+                guard let date = dateFormatter.date(from: $0.3) else {
+                    print("Ошибка конвертации даты: \($0.3)")
+                    return nil
+                }
+                
+                return DanceClass(
                     id: $0.0,
                     name: $0.1,
                     instructor: $0.2,
-                    time: $0.3,
+                    time: Timestamp(date: date),
                     maxCapacity: $0.4,
                     description: $0.5
                 )
@@ -90,7 +94,12 @@ extension PastBookingsViewController: UITableViewDataSource, UITableViewDelegate
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "pastBookingCell", for: indexPath)
         let booking = pastBookings[indexPath.row]
-        cell.textLabel?.text = "\(booking.name) — \(booking.instructor)\n\(booking.time)"
+        let date = booking.time.dateValue()
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "dd.MM.yyyy HH:mm"
+        let dateString = dateFormatter.string(from: date)
+
+        cell.textLabel?.text = "\(booking.name) — \(booking.instructor)\n\(dateString)"
         cell.textLabel?.numberOfLines = 2
         return cell
     }

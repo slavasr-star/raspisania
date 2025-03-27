@@ -108,24 +108,34 @@ class AddEditClassViewController: UIViewController {
     @objc private func saveTapped() {
         guard let name = nameTextField.text, !name.isEmpty,
               let instructor = instructorTextField.text, !instructor.isEmpty,
-              let time = timeTextField.text, !time.isEmpty else {
+              let timeString = timeTextField.text, !timeString.isEmpty else {
             print("Заполните все поля")
             return
         }
         
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm" // Настроить под твой формат времени
+        guard let date = formatter.date(from: timeString) else {
+            print("Некорректный формат даты")
+            return
+        }
+        let timestamp = Timestamp(date: date)
+        
         let description = descriptionTextView.text == placeholderText ? "" : descriptionTextView.text ?? ""
+        
         saveButton.isEnabled = false
         activityIndicator.startAnimating()
+        
         Task {
             var success = false
-
+            
             if let classToEdit = self.classToEdit {
                 success = await withCheckedContinuation { continuation in
                     DatabaseManager.shared.updateClass(
                         id: classToEdit.id,
                         name: name,
                         instructor: instructor,
-                        time: time,
+                        time: timestamp, // Теперь передаём Timestamp
                         maxCapacity: classToEdit.maxCapacity,
                         description: description
                     ) { isSuccess in
@@ -137,13 +147,13 @@ class AddEditClassViewController: UIViewController {
                     id: UUID().uuidString,
                     name: name,
                     instructor: instructor,
-                    time: time,
+                    time: timestamp, // Timestamp вместо строки
                     maxCapacity: 20,
                     description: description
                 )
                 success = await DatabaseManager.shared.addClass(newClass)
             }
-
+            
             DispatchQueue.main.async {
                 self.saveButton.isEnabled = true
                 self.activityIndicator.stopAnimating()
@@ -156,26 +166,5 @@ class AddEditClassViewController: UIViewController {
                 }
             }
         }
-    }
-}
-extension AddEditClassViewController: UITextViewDelegate {
-    func textViewDidBeginEditing(_ textView: UITextView) {
-        if textView.text == placeholderText {
-            textView.text = ""
-            textView.textColor = .black
-        }
-    }
-    
-    func textViewDidEndEditing(_ textView: UITextView) {
-        if textView.text.isEmpty {
-            textView.text = placeholderText
-            textView.textColor = .lightGray
-        }
-    }
-    
-    func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
-        let currentText = textView.text ?? ""
-        let newText = (currentText as NSString).replacingCharacters(in: range, with: text)
-        return newText.count <= 200
     }
 }
